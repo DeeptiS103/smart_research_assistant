@@ -7,16 +7,22 @@ This project is being built in stages to demonstrate core AI Engineering
 concepts: NLP (summarization, query-focused text processing), agentic
 behavior (planning, tool use, multi-step reasoning), and evaluation.
 
-## Status: Step 1 complete — Manual Pipeline
+## Status: Step 2 complete — Agent Behavior Added
 
-Currently the pipeline is fixed: Question → Search → Summarize each source →
-Synthesize final answer. No decision-making by the LLM yet — that's Step 2.
+Step 1 was a fixed pipeline. Step 2 adds real agentic behavior:
+- **Planning**: the LLM decomposes the question into 2-3 targeted sub-queries
+  instead of searching the raw question once
+- **Reflection**: after each round of searching, the LLM decides whether it
+  has enough information or should search again (up to a safety limit of
+  3 rounds)
+
+This means the LLM's own judgment now controls the program's flow — a
+core distinction between "using an LLM" and "building an agent."
 
 ## Roadmap
 
 - [x] **Step 1**: Manual pipeline (search → summarize → synthesize)
-- [ ] **Step 2**: Agent behavior — LLM decomposes the question into
-      sub-queries and decides when it has enough information
+- [x] **Step 2**: Agent behavior — planning sub-queries + deciding when to stop
 - [ ] **Step 3**: Semantic ranking of search results using embeddings
       (`sentence-transformers`) instead of trusting raw search order
 - [ ] **Step 4**: Evaluation harness — a test set of questions with
