@@ -7,31 +7,30 @@ This project is being built in stages to demonstrate core AI Engineering
 concepts: NLP (summarization, semantic ranking), agentic behavior
 (planning, tool use, multi-step reasoning), and evaluation.
 
-## Status: Step 3 complete — Semantic Ranking Added
+## Status: Step 4 complete — Evaluation Harness Added
 
-Step 1 was a fixed pipeline. Step 2 added agentic behavior (planning +
-reflection). Step 3 adds embedding-based relevance ranking on top:
+Step 4 adds an evaluation harness that runs the agent against a fixed
+test set (`test_questions.json`) and scores it on:
 
-- **Ranking**: every search result is scored for true semantic relevance
-  to the question (via cosine similarity of embeddings), not just trusted
-  in raw search-engine order
-- **Filtering**: results below a relevance threshold are dropped before
-  ever reaching the LLM, saving API calls and avoiding off-topic noise
-  in the final answer
-- **Deduplication**: near-identical sources (common when multiple sites
-  cover the same story) are collapsed to one, avoiding redundant summaries
+- **Citation validity**: does every `[Source N]` in the answer refer to
+  a source that actually exists?
+- **Faithfulness (hallucination check)**: an LLM-as-judge compares the
+  final answer against the gathered source summaries and flags any
+  claims not actually supported by them
+- **Efficiency**: search rounds, LLM calls, and wall-clock time per question
+- **Topic coverage**: whether the answer touched the topics expected
+  for that question
 
-This runs entirely locally via `sentence-transformers` — no API calls,
-no cost — and it's the same core technique (embeddings + cosine similarity)
-used in every RAG and vector-search system.
+Run `python step4_evaluation.py` to produce a console report and an
+`eval_results.json` file with full per-question detail — useful evidence
+for a portfolio README or interview discussion.
 
 ## Roadmap
 
 - [x] **Step 1**: Manual pipeline (search → summarize → synthesize)
 - [x] **Step 2**: Agent behavior — planning sub-queries + deciding when to stop
 - [x] **Step 3**: Semantic ranking + filtering + deduplication using embeddings
-- [ ] **Step 4**: Evaluation harness — a test set of questions with
-      expected answers, tracking citation accuracy and hallucination rate
+- [x] **Step 4**: Evaluation harness — citation validity, faithfulness, efficiency, coverage
 - [ ] **Step 5**: Memory + simple UI (Streamlit)
 
 ## Setup

@@ -1,0 +1,136 @@
+[
+  {
+    "id": "q1",
+    "question": "What are the main differences between RAG and fine-tuning for LLMs?",
+    "answer": "The main differences between RAG (Retrieval-Augmented Generation) and fine-tuning for LLMs lie in their methodologies, infrastructure requirements, and economic models. RAG connects the model to a proprietary database, whereas fine-tuning involves exposing a model to labeled data and updating its weights [Source 3, Source 5]. RAG systems often achieve better performance than fine-tuning while retaining more capabilities of the original LLM, making it preferable for large models like GPT-4 [Source 2]. In contrast, fine-tuning is advantageous for pre-trained models when the task requires adapting to static company policies and responses [Source 2]. RAG is generally more cost-efficient than fine-tuning due to its lower upfront investment and ability to leverage existing data [Source 10]. Fine-tuning, on the other hand, requires significant initial compute resources for training and is more resource-intensive [Source 10]. Overall, the choice between RAG and fine-tuning depends on the specific use case and infrastructure requirements [Source 11].",
+    "num_sources": 11,
+    "rounds_used": 1,
+    "search_calls": 3,
+    "llm_calls": 14,
+    "elapsed_seconds": 23.7,
+    "citation_check": {
+      "valid": true,
+      "total_citations": 5,
+      "invalid_citations": []
+    },
+    "faithfulness_check": {
+      "faithful": false,
+      "unsupported_claims": [
+        "Overall, the choice between RAG and fine-tuning depends on the specific use case and infrastructure requirements [Source 11]."
+      ]
+    },
+    "coverage_check": {
+      "covered": [
+        "retrieval"
+      ],
+      "coverage_ratio": 0.25
+    }
+  },
+  {
+    "id": "q2",
+    "question": "What is the transformer architecture and why is it important for NLP?",
+    "answer": "The Transformer architecture is a versatile neural network model used in Natural Language Processing (NLP) that has revolutionized the way computers understand and generate human language [Source 3, Source 7, Source 9]. It was introduced in the paper \"Attention is all you need\" and has since become the leading architecture for most text data applications [Source 1, Source 2]. The Transformer architecture uses attention mechanisms to weigh the importance of different parts of the input data, making it particularly effective for language processing tasks [Source 8, Source 9]. This ability to process data in parallel rather than sequentially has dramatically improved efficiency and performance in AI systems [Source 8]. The Transformer architecture is composed of encoders, decoders, and encoder-decoders, with encoders suited for tasks requiring bidirectional context, decoders for text generation, and encoder-decoders for sequence conversion [Source 4]. It has been widely used in various NLP tasks, including machine translation, text summarization, and sentiment analysis [Source 1, Source 3]. The Transformer architecture has fundamental differences from other models, such as GPT, which uses a unidirectional transformer architecture, and has shown promising results in various NLP tasks, including classification, translation, and text summarization [Source 5].",
+    "num_sources": 10,
+    "rounds_used": 1,
+    "search_calls": 3,
+    "llm_calls": 13,
+    "elapsed_seconds": 61.3,
+    "citation_check": {
+      "valid": true,
+      "total_citations": 3,
+      "invalid_citations": []
+    },
+    "faithfulness_check": {
+      "faithful": true,
+      "unsupported_claims": []
+    },
+    "coverage_check": {
+      "covered": [
+        "attention mechanism"
+      ],
+      "coverage_ratio": 0.33
+    }
+  },
+  {
+    "id": "q3",
+    "question": "How do vector databases work?",
+    "answer": "A vector database works by storing and managing data as high-dimensional vectors, allowing for efficient storage, indexing, and querying. It organizes data as points in a multidimensional vector space, where each point represents a piece of data and its location reflects its characteristics relative to other data [Source 1]. Vector databases efficiently store and index high-dimensional vector data by clustering vectors based on similarity [Source 2]. They represent data points as vectors with a fixed number of dimensions in a multi-dimensional space, enabling efficient storage, organization, and search of high-dimensional data points [Source 2]. To facilitate fast searching, vector databases utilize specialized algorithms for indexing, such as IVF, LSH, and HNSW, to speed up Approximate Nearest Neighbor (ANN) searches [Source 5]. These indexing algorithms help reduce the search scope by partitioning and organizing vectors into data structures [Source 5]. The primary operation in a vector database is the k-nearest neighbors (KNN) query, which finds the k vectors most similar to a given query vector [Source 7]. Vector databases work by applying a similarity metric to find a vector that is the most similar to the query, using indexing algorithms such as PQ, LSH, or HNSW to map vectors to a data structure for faster searching [Source 8].",
+    "num_sources": 11,
+    "rounds_used": 1,
+    "search_calls": 3,
+    "llm_calls": 14,
+    "elapsed_seconds": 61.0,
+    "citation_check": {
+      "valid": true,
+      "total_citations": 7,
+      "invalid_citations": []
+    },
+    "faithfulness_check": {
+      "faithful": false,
+      "unsupported_claims": [
+        "Vector databases efficiently store and index high-dimensional vector data by clustering vectors based on similarity",
+        "They represent data points as vectors with a fixed number of dimensions in a multi-dimensional space, enabling efficient storage, organization, and search of high-dimensional data points",
+        "The primary operation in a vector database is the k-nearest neighbors (KNN) query, which finds the k vectors most similar to a given query vector"
+      ]
+    },
+    "coverage_check": {
+      "covered": [
+        "indexing"
+      ],
+      "coverage_ratio": 0.33
+    }
+  },
+  {
+    "id": "q4",
+    "question": "What is the difference between an AI agent and a chatbot?",
+    "answer": "The primary difference between an AI agent and a chatbot lies in their capabilities, autonomy, and functionality. AI agents are flexible, intelligent systems that can communicate dynamically with users, carry out tasks, and make decisions with minimal human guidance [Source 1, Source 2, Source 3]. They are proactive, capable of reasoning, planning, and executing tasks, and can use tools and APIs to accomplish complex tasks [Source 7, Source 10]. In contrast, chatbots are rule-based, input-dependent tools that respond to queries, primarily relying on natural language processing to generate replies [Source 1, Source 9]. AI agents have advanced capabilities such as understanding and generating natural language, processing large amounts of information, and assisting with complex tasks [Source 2, Source 6]. The key difference between AI agents and chatbots is their architectural capabilities, with chatbots being read-only and AI agents able to read, write, and act [Source 4]. This distinction affects how each technology handles customer interactions and task complexity [Source 3].",
+    "num_sources": 10,
+    "rounds_used": 1,
+    "search_calls": 3,
+    "llm_calls": 13,
+    "elapsed_seconds": 58.0,
+    "citation_check": {
+      "valid": true,
+      "total_citations": 2,
+      "invalid_citations": []
+    },
+    "faithfulness_check": {
+      "faithful": true,
+      "unsupported_claims": []
+    },
+    "coverage_check": {
+      "covered": [
+        "autonomy",
+        "planning"
+      ],
+      "coverage_ratio": 0.5
+    }
+  },
+  {
+    "id": "q5",
+    "question": "What are common evaluation metrics for LLM-based systems?",
+    "answer": "Common evaluation metrics for LLM-based systems include a wide range of metrics that assess the system's performance based on specific criteria. These metrics include answer correctness, semantic similarity, and hallucination [Source 1], as well as Word Error Rate (WER), Character Recognition Rate (CRT), and Semantic Textual Similarity (STS) [Source 2]. Additionally, metrics such as Perplexity, Mean Reciprocal Rank (MRR), and Mean Average Precision (MAP) are used to evaluate language models and information retrieval tasks [Source 3]. For tasks such as sentiment analysis and text classification, metrics like F1 score, precision, and recall are commonly used [Source 4]. Furthermore, metrics like BLEU, ROUGE, METEOR, and BERTScore are used to evaluate the accuracy of text generation, translation, or summarization [Source 6]. Other metrics, such as language check, keyword presence, factuality-based metrics, QA-based metrics, and QG-based metrics, are also used to assess the generated text's understandability, consistency, factual accuracy, and relevance to the input [Source 8]. Overall, the choice of evaluation metric depends on the specific NLP task and the desired outcome [Source 2].",
+    "num_sources": 8,
+    "rounds_used": 1,
+    "search_calls": 3,
+    "llm_calls": 11,
+    "elapsed_seconds": 46.1,
+    "citation_check": {
+      "valid": true,
+      "total_citations": 7,
+      "invalid_citations": []
+    },
+    "faithfulness_check": {
+      "faithful": true,
+      "unsupported_claims": []
+    },
+    "coverage_check": {
+      "covered": [
+        "accuracy",
+        "hallucination",
+        "relevance"
+      ],
+      "coverage_ratio": 0.75
+    }
+  }
+]

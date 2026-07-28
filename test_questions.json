@@ -1,0 +1,27 @@
+[
+  {
+    "id": "q1",
+    "question": "What are the main differences between RAG and fine-tuning for LLMs?",
+    "expected_topics": ["retrieval", "knowledge update", "training cost", "external data"]
+  },
+  {
+    "id": "q2",
+    "question": "What is the transformer architecture and why is it important for NLP?",
+    "expected_topics": ["attention mechanism", "parallelization", "self-attention"]
+  },
+  {
+    "id": "q3",
+    "question": "How do vector databases work?",
+    "expected_topics": ["embeddings", "similarity search", "indexing"]
+  },
+  {
+    "id": "q4",
+    "question": "What is the difference between an AI agent and a chatbot?",
+    "expected_topics": ["autonomy", "tool use", "planning", "decision making"]
+  },
+  {
+    "id": "q5",
+    "question": "What are common evaluation metrics for LLM-based systems?",
+    "expected_topics": ["accuracy", "hallucination", "relevance", "latency"]
+  }
+]
