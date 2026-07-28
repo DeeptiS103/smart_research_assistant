@@ -1,27 +1,32 @@
 
-# Smart Research Assistant - Step 2: Adding Agent Behavior
-# ==========================================================
-# Step 1 was a FIXED pipeline: 1 search -> summarize -> synthesize. Always.
+# Smart Research Assistant - Step 3: Semantic Ranking with Embeddings
+# ======================================================================
+# Step 2 gave you an agent that plans searches and decides when to stop.
+# But it blindly trusts search results in whatever order Tavily returns them,
+# and summarizes EVERY result - even ones that are only loosely related.
 
-# Step 2 introduces two agentic capabilities:
-#   1. PLANNING    - the LLM decomposes your question into multiple targeted
-#                    sub-queries, instead of searching the raw question once.
-#   2. REFLECTION  - after each round of searching, the LLM judges whether it
-#                    has enough information, or whether it should search again
-#                    (up to a max number of rounds, so it can't loop forever).
+# Step 3 fixes this with EMBEDDINGS - turning text into vectors of numbers
+# that capture MEANING, so we can mathematically measure how relevant each
+# search result actually is to the question, and:
+#   1. RANK results by true relevance (not just search engine order)
+#   2. FILTER OUT results below a relevance threshold (don't waste LLM
+#      calls summarizing irrelevant junk)
+#   3. DEDUPLICATE near-identical sources (common when multiple sites
+#      report the same info)
 
-# This is the key difference from Step 1: the LLM's output now CONTROLS
-# the flow of your program (how many times the loop runs). That's what
-# makes this agentic instead of a fixed pipeline.
+# This is a foundational NLP/RAG concept - the same technique powers
+# vector databases, semantic search, and retrieval in RAG systems.
 
-# Setup: same as Step 1 - pip install -r requirements.txt, fill in .env
+# Setup: pip install -r requirements.txt (now includes sentence-transformers)
 
 
 import os
 import json
+import numpy as np
 from dotenv import load_dotenv
 from groq import Groq
 from tavily import TavilyClient
+from sentence_transformers import SentenceTransformer
 
 load_dotenv()
 
@@ -29,14 +34,124 @@ groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 tavily_client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
 LLM_MODEL = "llama-3.1-8b-instant"
-MAX_SEARCH_ROUNDS = 3  # safety limit - agents can loop forever without this
+MAX_SEARCH_ROUNDS = 3
+
+# This downloads a small, fast embedding model the first time you run it
+# (~80MB, cached locally after that - no API calls, runs on your own CPU)
+EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+
+RELEVANCE_THRESHOLD = 0.3   # results below this similarity score get dropped
+DUPLICATE_THRESHOLD = 0.92  # results above this similarity to EACH OTHER = duplicates
 
 
 # ---------------------------------------------------------------------------
-# REUSED FROM STEP 1: search + summarize + synthesize (unchanged)
+# NEW - EMBEDDINGS: turning text into vectors that capture meaning
 # ---------------------------------------------------------------------------
-def search_web(query: str, max_results: int = 3) -> list[dict]:
-    print(f"    🔍 Searching: {query}")
+def embed_text(text: str) -> np.ndarray:
+    
+    # Converts text into a vector (list of numbers) that represents its
+    # MEANING. Texts with similar meaning end up with similar vectors,
+    # even if they use completely different words.
+
+    # Example: "car" and "automobile" get similar vectors even though they
+    # share zero letters - because embeddings capture semantic meaning,
+    # not just word overlap. This is what makes them more powerful than
+    # simple keyword matching.
+    
+    return EMBED_MODEL.encode(text, convert_to_numpy=True)
+
+
+def cosine_similarity(vec_a: np.ndarray, vec_b: np.ndarray) -> float:
+    
+    # Measures how similar two vectors are, from -1 (opposite) to 1 (identical).
+    # In practice for text embeddings, scores usually fall between 0 and 1.
+
+    # This is THE standard way to compare embeddings - you'll see this exact
+    # calculation in every RAG/semantic search system.
+    
+    return float(np.dot(vec_a, vec_b) / (np.linalg.norm(vec_a) * np.linalg.norm(vec_b)))
+
+
+# ---------------------------------------------------------------------------
+# NEW - RANK + FILTER: use embeddings to keep only genuinely relevant results
+# ---------------------------------------------------------------------------
+def rank_and_filter_results(results: list[dict], question: str) -> list[dict]:
+    
+    # Takes raw search results and:
+    # 1. Embeds the question once
+    # 2. Embeds each result's content
+    # 3. Scores each result by similarity to the question
+    # 4. Drops anything below RELEVANCE_THRESHOLD (too off-topic to bother with)
+    # 5. Sorts remaining results by relevance, best first
+
+    # This means the LLM only ever sees/summarizes content that's ACTUALLY
+    # relevant - saving API calls and improving answer quality.
+    
+    if not results:
+        return []
+
+    question_vec = embed_text(question)
+
+    scored = []
+    for r in results:
+        # Embed a chunk of the content (embedding the whole page is
+        # unnecessary and slower - the first ~500 chars usually capture
+        # the gist for ranking purposes)
+        content_vec = embed_text(r["content"][:500])
+        score = cosine_similarity(question_vec, content_vec)
+        scored.append({**r, "relevance_score": score})
+
+    # Filter out low-relevance results
+    relevant = [r for r in scored if r["relevance_score"] >= RELEVANCE_THRESHOLD]
+
+    # Sort best-first
+    relevant.sort(key=lambda r: r["relevance_score"], reverse=True)
+
+    dropped = len(results) - len(relevant)
+    if dropped > 0:
+        print(f"Filtered out {dropped} low-relevance result(s)")
+
+    return relevant
+
+
+# ---------------------------------------------------------------------------
+# NEW - DEDUPLICATE: multiple sources often say the same thing
+# ---------------------------------------------------------------------------
+def deduplicate_results(results: list[dict]) -> list[dict]:
+    
+    # Compares every result against results we've already kept. If a new
+    # result is too similar (near-duplicate content, common when multiple
+    # news sites cover the same story), skip it - it wastes an LLM call
+    # and adds no new information to the final answer.
+    
+    if not results:
+        return []
+
+    kept = [results[0]]
+    kept_vecs = [embed_text(results[0]["content"][:500])]
+
+    for r in results[1:]:
+        r_vec = embed_text(r["content"][:500])
+        is_duplicate = any(
+            cosine_similarity(r_vec, kept_vec) >= DUPLICATE_THRESHOLD
+            for kept_vec in kept_vecs
+        )
+        if not is_duplicate:
+            kept.append(r)
+            kept_vecs.append(r_vec)
+
+    removed = len(results) - len(kept)
+    if removed > 0:
+        print(f"Removed {removed} near-duplicate result(s)")
+
+    return kept
+
+
+# ---------------------------------------------------------------------------
+# REUSED FROM STEP 1/2 (unchanged)
+# ---------------------------------------------------------------------------
+def search_web(query: str, max_results: int = 4) -> list[dict]:
+    print(f"Searching: {query}")
     response = tavily_client.search(query=query, max_results=max_results, search_depth="basic")
     return response.get("results", [])
 
@@ -77,36 +192,19 @@ def synthesize_answer(question: str, summarized_sources: list[dict]) -> str:
         max_tokens=700,
     )
     if response.choices[0].finish_reason == "length":
-        print("\nWarning: answer may have been truncated by max_tokens")
-
+        print("Warning: answer may have been truncated by max_tokens")
     return response.choices[0].message.content.strip()
 
 
-# ---------------------------------------------------------------------------
-# NEW - AGENT CAPABILITY 1: PLANNING
-# ---------------------------------------------------------------------------
 def plan_searches(question: str, already_known: str = "") -> list[str]:
-    
-    # Instead of searching the raw question, ask the LLM to break it into
-    # 2-3 targeted sub-queries. This is the PLANNING step of the agent.
-
-    # If `already_known` is provided (from a previous round), the LLM plans
-    # searches that fill GAPS rather than repeating what it already has -
-    # this is what makes round 2+ smarter than just "search again."
-
-    # We ask for JSON output because we need to parse this programmatically -
-    # unlike the summarization prompts, this output feeds into CODE, not
-    # just into another prompt.
-    
     context_note = (
         f"\n\nYou already have this information:\n{already_known}\n\n"
         "Plan searches that fill in what's MISSING - don't repeat what you already know."
         if already_known else ""
     )
-
     prompt = f"""You are planning research for this question:
 
-    Question: {question}
+    Question: {question} 
     {context_note}
 
     Break this into 2-3 specific, targeted search queries that together would give a complete answer. Respond with ONLY a JSON array of strings, nothing else.
@@ -119,56 +217,35 @@ def plan_searches(question: str, already_known: str = "") -> list[str]:
         temperature=0.3,
         max_tokens=200,
     )
-    raw = response.choices[0].message.content.strip()
-
-    # LLMs sometimes wrap JSON in ```json fences despite instructions -
-    # strip those defensively rather than assuming perfect compliance
-    raw = raw.replace("```json", "").replace("```", "").strip()
-
+    raw = response.choices[0].message.content.strip().replace("```json", "").replace("```", "").strip()
     try:
         queries = json.loads(raw)
         if isinstance(queries, list) and all(isinstance(q, str) for q in queries):
             return queries
     except json.JSONDecodeError:
         pass
-
-    # Fallback: if parsing fails, just use the original question as one query.
-    # Agents need graceful fallbacks - never let a parsing failure crash the pipeline.
-    print("\nCould not parse planned queries, falling back to original question")
+    print("    ⚠️  Could not parse planned queries, falling back to original question")
     return [question]
 
 
-# ---------------------------------------------------------------------------
-# NEW - AGENT CAPABILITY 2: REFLECTION (deciding whether to stop)
-# ---------------------------------------------------------------------------
 def enough_info(question: str, summaries_so_far: list[dict]) -> bool:
-    
-    # This is the core agentic decision: after gathering some information,
-    # should we STOP (we have enough) or CONTINUE (search again)?
-
-    # This is what separates an agent from a pipeline - the LLM's judgment
-    # directly controls whether your while-loop keeps running.
-    
     combined = "\n".join(f"- {s['summary']}" for s in summaries_so_far)
-
     prompt = f"""Question: {question}
 
     Information gathered so far: {combined}
 
     Is this enough information to write a complete, accurate answer to the question? Respond with ONLY one word: YES or NO."""
-
     response = groq_client.chat.completions.create(
         model=LLM_MODEL,
         messages=[{"role": "user", "content": prompt}],
-        temperature=0,  # 0 = deterministic, we want a reliable YES/NO, not creativity
+        temperature=0,
         max_tokens=5,
     )
-    decision = response.choices[0].message.content.strip().upper()
-    return "YES" in decision
+    return "YES" in response.choices[0].message.content.strip().upper()
 
 
 # ---------------------------------------------------------------------------
-# MAIN AGENT LOOP
+# MAIN AGENT LOOP - now with semantic ranking + dedup inserted
 # ---------------------------------------------------------------------------
 def research_agent(question: str):
     print(f"\nQuestion: {question}\n")
@@ -180,21 +257,36 @@ def research_agent(question: str):
         round_num += 1
         print(f"Round {round_num}")
 
-        # PLAN: decide what to search for (aware of what we already have)
         already_known = "\n".join(s["summary"] for s in all_summaries)
         queries = plan_searches(question, already_known)
         print(f"Planned queries: {queries}")
 
-        # ACT: run each planned search and summarize results
+        # Gather raw results from all planned queries for this round
+        raw_results = []
         for query in queries:
-            results = search_web(query)
-            for result in results:
-                summary = summarize_source(result["content"], question)
-                all_summaries.append(
-                    {"title": result["title"], "url": result["url"], "summary": summary}
-                )
+            raw_results.extend(search_web(query))
 
-        # REFLECT: does the agent think it has enough now?
+        # NEW: rank by true relevance and drop off-topic results
+        ranked_results = rank_and_filter_results(raw_results, question)
+
+        # NEW: remove near-duplicate content before wasting LLM calls on them
+        unique_results = deduplicate_results(ranked_results)
+
+        print(f"{len(raw_results)} raw → {len(unique_results)} after ranking/dedup")
+
+        # Only NOW do we spend LLM calls summarizing - on filtered, ranked,
+        # deduplicated results. This is more efficient AND more accurate.
+        for result in unique_results:
+            summary = summarize_source(result["content"], question)
+            all_summaries.append(
+                {
+                    "title": result["title"],
+                    "url": result["url"],
+                    "summary": summary,
+                    "relevance_score": round(result["relevance_score"], 3),
+                }
+            )
+
         if enough_info(question, all_summaries):
             print(f"Agent decided: enough information gathered after round {round_num}\n")
             break
@@ -204,7 +296,6 @@ def research_agent(question: str):
     if round_num == MAX_SEARCH_ROUNDS:
         print(f"Hit max rounds ({MAX_SEARCH_ROUNDS}) - stopping to avoid infinite loop\n")
 
-    # SYNTHESIZE final answer from everything gathered across all rounds
     print("Synthesizing final answer...\n")
     final_answer = synthesize_answer(question, all_summaries)
 
@@ -215,15 +306,13 @@ def research_agent(question: str):
     print("\n" + "=" * 70)
     print(f"SOURCES ({len(all_summaries)} total, across {round_num} round(s))")
     print("=" * 70)
-    for i, s in enumerate(all_summaries):
-        print(f"[Source {i+1}] {s['title']}\n{s['url']}\n")
+    # Show sources sorted by relevance so you can see the ranking worked
+    for i, s in enumerate(sorted(all_summaries, key=lambda x: x["relevance_score"], reverse=True)):
+        print(f"[Source {i+1}] (relevance: {s['relevance_score']}) {s['title']}\n{s['url']}\n")
 
     return final_answer, all_summaries, round_num
 
 
-# ---------------------------------------------------------------------------
-# RUN IT
-# ---------------------------------------------------------------------------
 if __name__ == "__main__":
     # test_question = "What are the main differences between RAG and fine-tuning for LLMs?"
     test_question = input("Please Enter a Question : ")
