@@ -3,3 +3,4 @@ tavily-python
 python-dotenv
 sentence-transformers
 numpy
+streamlit
